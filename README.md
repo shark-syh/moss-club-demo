@@ -4,6 +4,8 @@
 >
 > 本仓库为**多人共创**项目：硬件、固件、上位机、文档、测试等方向都欢迎参与。请先读 [如何参与贡献](#-如何参与贡献) 和 [文档索引](#-文档索引)。
 
+> 📦 **当前版本**：`0.1.0` —— 见仓库根目录 [`VERSION`](VERSION) 文件；由 [`scripts/version.py`](scripts/version.py) 自动维护（git 标签驱动，`vX.Y.Z`）。运行 `python scripts/version.py` 即可查看。
+
 ---
 
 ## 📌 项目简介
@@ -282,6 +284,8 @@ python server/server.py
 | [`firmware/esp32c3/moss_firmware.ino`](firmware/esp32c3/moss_firmware.ino) | ESP32-C3 固件源码 |
 | [`server/server.py`](server/server.py) | 电脑端上位机源码 |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | 多人协作规范 |
+| [`VERSION`](VERSION) | 当前版本（语义化版本，`scripts/version.py` 维护） |
+| [`scripts/version.py`](scripts/version.py) | 版本管理脚本（查看 / 写入 / bump / 打标签） |
 
 ---
 

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 项目文档 · README
+    url: https://github.com/shark-syh/moss-club-demo#readme
+    about: 项目入口、架构、快速开始与安全红线
+  - name: 贡献指南
+    url: https://github.com/shark-syh/moss-club-demo/blob/master/CONTRIBUTING.md
+    about: 提交规范与多人共创约定

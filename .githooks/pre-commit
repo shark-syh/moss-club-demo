@@ -1,0 +1,16 @@
+#!/bin/sh
+# 每次提交前，自动把当前版本（源自 git 标签 vX.Y.Z）写入根目录 VERSION 文件。
+# 只有打了新标签才会改变 VERSION，所以正常提交不会产生额外变更、也不会冲突。
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+
+if command -v python >/dev/null 2>&1; then
+  PY="python"
+elif command -v python3 >/dev/null 2>&1; then
+  PY="python3"
+else
+  exit 0
+fi
+
+"$PY" "$root/scripts/version.py" write >/dev/null 2>&1
+git add VERSION 2>/dev/null
+exit 0

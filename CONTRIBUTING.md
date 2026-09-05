@@ -44,6 +44,15 @@ test: 增加路径穿越拦截用例
 
 Commit 说明做了什么，而不是罗列文件。
 
+### 3.1 版本管理（语义化版本 + 标签驱动）
+
+- 版本号以 **git 标签**为准：`vX.Y.Z`（如 `v0.1.0`），写入仓库根目录 [`VERSION`](VERSION) 文件。
+- 查看当前版本：`python scripts/version.py`
+- 完整构建版本（含提交数与短哈希）：`python scripts/version.py full`
+- 发版递增：`python scripts/version.py bump [patch|minor|major]` → 自动写入 `VERSION`、提交并打标签 `vX.Y.Z`，然后 `git push origin master --tags`。
+- 已配置 `core.hooksPath=.githooks`，每次 commit 会自动刷新 `VERSION`；新克隆后请执行：
+  `git config core.hooksPath .githooks`
+
 ## 4. 工作流程
 
 1. 认领前先开 **Issue**：说明背景、改动点、验收标准。
