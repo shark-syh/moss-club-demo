@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# 环境与密钥（绝不可提交！）
+.env
+*.env
+DEEPSEEK_API_KEY.txt
+
+# 运行时产物
+*.wav
+*.pcm
+*.log
+logs/
+
+# 模型缓存 / 下载
+models/
+*.bin
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Arduino
+*.ino.eeprom
+*.ino.hex
+build/
