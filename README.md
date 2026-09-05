@@ -284,6 +284,7 @@ python server/server.py
 | [`firmware/esp32c3/moss_firmware.ino`](firmware/esp32c3/moss_firmware.ino) | ESP32-C3 固件源码 |
 | [`server/server.py`](server/server.py) | 电脑端上位机源码 |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | 多人协作规范 |
+| [`AGENTS.md`](AGENTS.md) | 给其他 AI Agent 的协作 / GitHub 推送 / 文档管理约定 |
 | [`VERSION`](VERSION) | 当前版本（语义化版本，`scripts/version.py` 维护） |
 | [`scripts/version.py`](scripts/version.py) | 版本管理脚本（查看 / 写入 / bump / 打标签） |
 
