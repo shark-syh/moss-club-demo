@@ -8,6 +8,7 @@
 
 - 架构与安全红线：见 [README.md](README.md) 与 [docs/MOSS语音助手方案.md](docs/MOSS语音助手方案.md)。
 - 硬件接线：见 [docs/接线方案与端口定义.md](docs/接线方案与端口定义.md)。
+- 软硬件接口：见 [docs/软件接口协议.md](docs/软件接口协议.md)，开发前必须先确认请求、响应和音频格式。
 - 当前代码：`firmware/esp32c3/moss_firmware.ino`、`server/server.py`。
 
 ## 2. 安全红线（必须遵守，评审时一票否决）
@@ -69,6 +70,7 @@ Commit 说明做了什么，而不是罗列文件。
 - **上位机**：`pip install -r server/requirements.txt` 后，用一段 PCM/脚本测 `/api/command`；验证合法路径打开、非法路径拦截、空录音、超时兜底。
 - **固件**：烧录后串口观察 `ESP32 IP`、录音、上传、播放日志；检查 WS2812 状态灯与 GPIO 是否符合预期。
 - **端到端**：建议跑 30 次完整流程，记录失败原因与耗时。
+- **接口联调**：必须按 [软件接口协议](docs/软件接口协议.md) 的顺序，从固定 PCM、固定 JSON、固定 WAV 逐步联调，再接入真实 ASR 和 DeepSeek。
 - 任何改动尽量不要破坏现有默认配置（GPIO、端口 8765、模型 base）。
 
 ## 6. 环境说明
