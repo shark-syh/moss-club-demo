@@ -157,6 +157,7 @@ DeepSeek API
 - 环境变量：`$env:DEEPSEEK_API_KEY = "你的 Key"`
 - 启动：`.venv\Scripts\activate` → `python server.py`
 - 源码：见 [`server/server.py`](server/server.py)。
+- ESP32 与电脑端的请求、响应、TTS 和联调约定：见 [`docs/软件接口协议.md`](docs/软件接口协议.md)。
 
 ### ASR 选型
 
@@ -280,6 +281,7 @@ python server/server.py
 | [`README.md`](README.md) | 本文件：项目入口与汇总 |
 | [`docs/MOSS语音助手方案.md`](docs/MOSS语音助手方案.md) | 完整开发方案（含代码模板、排期、风险） |
 | [`docs/接线方案与端口定义.md`](docs/接线方案与端口定义.md) | 已购硬件接线与 GPIO 映射 |
+| [`docs/软件接口协议.md`](docs/软件接口协议.md) | ESP32 与电脑端上位机的 HTTP、音频、TTS、安全和联调协议 |
 | [`docs/AI开发提示词-MOSS语音助手项目.md`](docs/AI开发提示词-MOSS语音助手项目.md) | 生成方案的原始提示词（需求背景） |
 | [`firmware/esp32c3/moss_firmware.ino`](firmware/esp32c3/moss_firmware.ino) | ESP32-C3 固件源码 |
 | [`server/server.py`](server/server.py) | 电脑端上位机源码 |
