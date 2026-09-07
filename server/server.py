@@ -27,10 +27,8 @@ import wave
 from pathlib import Path
 from urllib.parse import quote
 
-import pyttsx3
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
-from faster_whisper import WhisperModel
 from openai import OpenAI
 
 app = FastAPI()
@@ -44,8 +42,19 @@ client = OpenAI(
     base_url="https://api.deepseek.com",
 )
 
-# 预先加载 ASR 模型，避免每次请求重复加载
-asr_model = WhisperModel("base", device="cpu", compute_type="int8")
+# ASR 模型懒加载：首次 transcribe 时才创建并缓存，避免 import 阶段下载/加载模型，
+# 便于自动化测试直接导入本模块；真实启动时在 __main__ 中预热，演示首问不卡顿。
+_asr_model = None
+
+
+def _get_asr_model():
+    """创建并缓存 faster-whisper 模型（进程内只加载一次）。"""
+    global _asr_model
+    if _asr_model is None:
+        from faster_whisper import WhisperModel  # 延迟 import，测试无需重型 ASR
+
+        _asr_model = WhisperModel("base", device="cpu", compute_type="int8")
+    return _asr_model
 
 TOOLS = [
     {
@@ -105,7 +114,7 @@ def pcm_to_wav(pcm: bytes) -> str:
 def transcribe(pcm: bytes) -> str:
     wav_path = pcm_to_wav(pcm)
     try:
-        segments, _ = asr_model.transcribe(
+        segments, _ = _get_asr_model().transcribe(
             wav_path,
             language="zh",
             beam_size=1,
@@ -127,6 +136,8 @@ def safe_open_desktop_item(relative_path: str) -> tuple[bool, str]:
         return False, "路径为空"
 
     candidate_text = relative_path.replace("/", "\\").strip()
+    if not candidate_text:
+        return False, "路径为空"
 
     # 拒绝绝对路径、UNC 路径、命令字符和路径穿越
     forbidden = [":", "\x00", "*", "?", "|", ">", "<", '"']
@@ -203,7 +214,7 @@ async def command(request: Request):
 
     if len(pcm) < 1000:
         return JSONResponse(
-            {"reply": "录音太短，请再说一次", "tts_url": ""},
+            {"recognized_text": "", "reply": "录音太短，请再说一次", "tts_url": ""},
             status_code=400,
         )
 
@@ -221,13 +232,15 @@ async def command(request: Request):
     except Exception:
         # 不把 API Key、路径或堆栈暴露给机器人
         return JSONResponse(
-            {"reply": "服务暂时不可用，请使用备用演示模式。", "tts_url": ""},
+            {"recognized_text": "", "reply": "服务暂时不可用，请使用备用演示模式。", "tts_url": ""},
             status_code=500,
         )
 
 
 @app.get("/tts")
 def tts(text: str):
+    import pyttsx3  # 延迟导入：只有 /tts 接口需要 SAPI 引擎
+
     output = Path(tempfile.mktemp(suffix=".wav"))
 
     engine = pyttsx3.init()
@@ -246,4 +259,5 @@ def tts(text: str):
 if __name__ == "__main__":
     import uvicorn
 
+    _get_asr_model()  # 启动前预热 ASR，保持演示第一次请求不卡顿
     uvicorn.run(app, host=HOST, port=PORT)
