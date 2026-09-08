@@ -64,3 +64,37 @@ def test_internal_error_does_not_leak(monkeypatch):
     assert body["reply"] == "服务暂时不可用，请使用备用演示模式。"
     assert "secret-key-123" not in r.text
     assert "C:\\Users" not in r.text
+
+
+def test_tts_cleans_up_temp_wav(monkeypatch):
+    """/tts 生成 WAV 后应清理临时文件，避免长时间演示堆积临时文件。"""
+    import os
+    import sys
+    import types
+
+    written = {}
+
+    class FakeEngine:
+        def setProperty(self, *a, **k):
+            pass
+
+        def save_to_file(self, text, path):
+            written["path"] = path
+            with open(path, "wb") as f:
+                f.write(b"RIFF\x00\x00\x00\x00fakewav")
+
+        def runAndWait(self):
+            pass
+
+        def stop(self):
+            pass
+
+    fake_pyttsx3 = types.ModuleType("pyttsx3")
+    fake_pyttsx3.init = lambda: FakeEngine()
+    monkeypatch.setitem(sys.modules, "pyttsx3", fake_pyttsx3)
+
+    r = client.get("/tts", params={"text": "你好"})
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("audio/wav")
+    assert "path" in written
+    assert not os.path.exists(written["path"])

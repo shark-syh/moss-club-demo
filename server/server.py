@@ -27,7 +27,7 @@ import wave
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import FastAPI, Request
+from fastapi import BackgroundTasks, FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from openai import OpenAI
 
@@ -238,16 +238,22 @@ async def command(request: Request):
 
 
 @app.get("/tts")
-def tts(text: str):
+def tts(text: str, background_tasks: BackgroundTasks):
     import pyttsx3  # 延迟导入：只有 /tts 接口需要 SAPI 引擎
 
-    output = Path(tempfile.mktemp(suffix=".wav"))
+    # 用 NamedTemporaryFile 取代 tempfile.mktemp（后者已弃用且有安全风险）
+    file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
+    file.close()
+    output = Path(file.name)
 
     engine = pyttsx3.init()
     engine.setProperty("rate", 175)
     engine.save_to_file(text, str(output))
     engine.runAndWait()
     engine.stop()
+
+    # 响应发送完成后删除临时 WAV，避免长时间演示堆积临时文件
+    background_tasks.add_task(output.unlink, missing_ok=True)
 
     return FileResponse(
         output,
