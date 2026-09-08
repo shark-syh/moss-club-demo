@@ -35,26 +35,33 @@ def make_synthetic_pcm(seconds=4, rate=16000, freq=300, amp=1500):
 
 
 def wav_to_pcm(path: str) -> bytes:
-    """把 WAV 转为 16kHz/单声道/16bit PCM 字节。"""
+    """把 WAV 转为 16kHz/单声道/16bit PCM 字节。
+
+    修复原实现的三个问题：
+    (a) 非 16bit WAV 时 data 为 [] 导致 IndexError 崩溃 -> 先统一转 16bit；
+    (b) 立体声未真正下混（两分支相同）、把帧当采样索引错位 -> 按左右平均下混；
+    (c) 注释称线性插值实为最近邻抽取 -> 改用 audioop.ratecv 做重采样。
+    """
     with wave.open(path, "rb") as w:
         params = w.getparams()
         frames = w.readframes(params.nframes)
     if params.framerate == SAMPLE_RATE and params.nchannels == 1 and params.sampwidth == 2:
         return frames
-    # 简单重采样：不满足标准格式时打印提示，仍按原数据发送（由服务端包装）
+
     print(f"提示：WAV 为 {params.framerate}Hz/{params.nchannels}ch/{params.sampwidth*8}bit，"
-          f"建议用 16kHz/单声道/16bit；将按原格式发送。")
-    # 用 wave 直接重采样到 16k 单声道 16bit（线性插值）
-    import array
-    data = array.array("h", frames if params.sampwidth == 2 else [])
-    out = array.array("h")
-    ratio = params.framerate / SAMPLE_RATE
-    for idx in range(int(params.nframes / ratio)):
-        src = int(idx * ratio)
-        if src < params.nframes:
-            ch = data[src * params.nchannels] if params.nchannels == 1 else data[src * params.nchannels]
-            out.append(ch)
-    return out.tobytes()
+          f"将转为 16kHz/单声道/16bit。")
+
+    import audioop
+    # 统一位深为 16bit
+    if params.sampwidth != 2:
+        frames = audioop.lin2lin(frames, params.sampwidth, 2)
+    # 下混为单声道（左右取平均）
+    if params.nchannels > 1:
+        frames = audioop.tomono(frames, 2, 0.5, 0.5)
+    # 重采样到 16kHz
+    if params.framerate != SAMPLE_RATE:
+        frames, _ = audioop.ratecv(frames, 2, 1, params.framerate, SAMPLE_RATE, None)
+    return frames
 
 
 def main():

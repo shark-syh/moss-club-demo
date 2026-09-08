@@ -99,7 +99,8 @@ def spectral_noise_reduce(x, sr, n_fft=512, hop=128, noise_frac=0.25, over_sub=1
         out[s: s + n_fft] += out_frames[i] * win
         win_sum[s: s + n_fft] += win * win
     out = out / np.maximum(win_sum, 1e-8)
-    return out.astype(np.int16), n
+    # 限幅到 int16 范围内再转 int16，避免频谱过减/重建峰值越界 wrap 产生爆音/伪影
+    return np.clip(out, -32767, 32767).astype(np.int16), n
 
 
 def keep_loudest_segment(x, sr, frame_ms=30, pad_ms=200, thresh_abs=250, thresh_ratio=0.12):
@@ -166,8 +167,17 @@ def play_reply_interruptible(text, tts_url):
         sr = w.getframerate()
         ch = w.getnchannels()
         nf = w.getnframes()
+        sampwidth = w.getsampwidth()
         frames = w.readframes(nf)
-    arr = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
+    # 按真实位深解析（默认 16bit 有符号；8bit 无符号；32bit 有符号），而非硬编码 int16
+    if sampwidth == 2:
+        arr = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
+    elif sampwidth == 1:
+        arr = (np.frombuffer(frames, dtype=np.uint8).astype(np.float32) - 128.0) / 128.0
+    elif sampwidth == 4:
+        arr = np.frombuffer(frames, dtype=np.int32).astype(np.float32) / 2147483648.0
+    else:
+        arr = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
     if ch > 1:
         arr = arr.reshape(-1, ch).mean(axis=1)
     duration = (nf / sr) + 0.15

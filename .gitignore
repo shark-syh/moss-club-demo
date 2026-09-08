@@ -41,3 +41,6 @@ build/
 stl文件.zip
 stl文件/
 v2_*_img_*.png
+
+# Agent 协作运行时状态（不入库）
+.agent-teams/

@@ -170,8 +170,9 @@ void recordPcm() {
 
     int count = bytesRead / sizeof(int32_t);
     for (int i = 0; i < count && index < SAMPLE_COUNT; i++) {
-      // INMP441 常见输出为左对齐 24 位，右移后转 16 位
-      int32_t sample = raw[i] >> 14;
+      // INMP441 常见输出为左对齐 24 位，32 位槽内取样应右移 16 转 16 位；
+      // 若右移 14 会相对满量程放大 4 倍(12dB)，正常语音会被硬裁剪到 ±32767 失真。
+      int32_t sample = raw[i] >> 16;
       if (sample > 32767) sample = 32767;
       if (sample < -32768) sample = -32768;
       pcmBuffer[index++] = (int16_t)sample;
@@ -181,21 +182,56 @@ void recordPcm() {
 }
 
 // ---------------- 播放 WAV ----------------
+// 解析 RIFF/WAVE 头，跳过到 data chunk 的 PCM 数据起点。
+// 成功返回 true（流已定位到 data 数据段）。避免固定 44 字节跳过导致错位/静音（FW-4）。
+bool skipToDataChunk(WiFiClient* stream) {
+  uint8_t hdr[12];
+  if (stream->readBytes(hdr, sizeof(hdr)) != sizeof(hdr)) return false;
+  if (memcmp(hdr, "RIFF", 4) != 0 || memcmp(hdr + 8, "WAVE", 4) != 0) return false;
+
+  while (true) {
+    uint8_t ch[8];
+    if (stream->readBytes(ch, sizeof(ch)) != sizeof(ch)) return false;
+    uint32_t size = (uint32_t)ch[4] | ((uint32_t)ch[5] << 8) |
+                    ((uint32_t)ch[6] << 16) | ((uint32_t)ch[7] << 24);
+    if (memcmp(ch, "data", 4) == 0) {
+      return true;  // 已定位到 data chunk，剩余字节即 PCM 数据
+    }
+    // 跳过当前 chunk 的数据（对齐到偶数字节）
+    uint32_t skip = size + (size & 1);
+    uint8_t dummy[512];
+    while (skip > 0) {
+      int n = stream->readBytes(dummy, min((uint32_t)sizeof(dummy), skip));
+      if (n <= 0) return false;
+      skip -= (uint32_t)n;
+    }
+  }
+}
+
 void playWavFromUrl(const String& url) {
   HTTPClient http;
-  if (!http.begin(url)) return;
+  http.setConnectTimeout(10000);
+  http.setTimeout(20000);   // 服务端 /tts 需生成并处理 WAV，放宽 HTTPClient 默认 ~5s
+  if (!http.begin(url)) {
+    setRingColor(COLOR_IDLE);  // 失败复位，避免 LED 停在错误/思考
+    return;
+  }
 
   int status = http.GET();
   if (status != HTTP_CODE_OK) {
     http.end();
+    setRingColor(COLOR_IDLE);  // 失败复位
     return;
   }
 
   WiFiClient* stream = http.getStreamPtr();
 
-  // 跳过标准 44 字节 PCM WAV 头；生产代码应进一步解析 fmt/data chunk
-  uint8_t header[44];
-  stream->readBytes(header, sizeof(header));
+  // 解析 WAV 头定位 data chunk，再开始播放（而非固定跳过 44 字节）
+  if (!skipToDataChunk(stream)) {
+    http.end();
+    setRingColor(COLOR_IDLE);
+    return;
+  }
 
   installI2STx();
   setRingColor(COLOR_PLAYING);
@@ -223,7 +259,13 @@ void sendRecording() {
   HTTPClient http;
   String endpoint = String(SERVER_URL) + "/api/command";
 
-  if (!http.begin(endpoint)) return;
+  http.setConnectTimeout(10000);
+  http.setTimeout(20000);   // 服务端需 faster-whisper + DeepSeek，常 >HTTPClient 默认 ~5s
+
+  if (!http.begin(endpoint)) {
+    setRingColor(COLOR_IDLE);  // 失败复位，避免 LED 停在录音红
+    return;
+  }
   http.addHeader("Content-Type", "audio/pcm; rate=16000; channels=1");
 
   setRingColor(COLOR_THINKING);
@@ -246,6 +288,16 @@ void sendRecording() {
       }
     }
   } else {
+    // 非 200：协议要求错误响应带 reply；此时 tts_url 为空，无法走 URL 播放，改由串口提示。
+    String response = http.getString();
+    String reply = "";
+    DynamicJsonDocument doc(2048);
+    if (deserializeJson(doc, response) == DeserializationError::Ok) {
+      reply = String(doc["reply"] | "");
+    }
+    if (reply.length() > 0) {
+      Serial.println("服务端错误: " + reply);
+    }
     ringBlink(COLOR_ERROR, 4, 150);
   }
 
