@@ -53,7 +53,7 @@ def _get_asr_model():
     if _asr_model is None:
         from faster_whisper import WhisperModel  # 延迟 import，测试无需重型 ASR
 
-        _asr_model = WhisperModel("base", device="cpu", compute_type="int8")
+        _asr_model = WhisperModel("small", device="cpu", compute_type="int8")
     return _asr_model
 
 TOOLS = [
@@ -116,9 +116,15 @@ def transcribe(pcm: bytes) -> str:
     try:
         segments, _ = _get_asr_model().transcribe(
             wav_path,
-            language="zh",
+            language=None,                      # 自动检测，支持中英文混合；不强制中文，避免英文被转成中文乱码
             beam_size=1,
             vad_filter=True,
+            condition_on_previous_text=False,   # 减少重复/幻觉
+            temperature=0.0,                    # 更确定，减少乱码
+            no_speech_threshold=0.6,
+            log_prob_threshold=-1.0,
+            # 领域提示词：让模型预期这些英文/专有名词，减少对 MOSS/社团嘉年华/C3 的误听
+            initial_prompt="以下是普通话与英文混合的校园演示对话，包含 MOSS、社团嘉年华、ESP32、C3 等词汇。",
         )
         return "".join(segment.text for segment in segments).strip()
     finally:
