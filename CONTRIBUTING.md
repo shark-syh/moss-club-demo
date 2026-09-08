@@ -68,6 +68,7 @@ Commit 说明做了什么，而不是罗列文件。
 ## 5. 验证与测试建议
 
 - **上位机**：`pip install -r server/requirements.txt` 后，用一段 PCM/脚本测 `/api/command`；验证合法路径打开、非法路径拦截、空录音、超时兜底。
+- **上位机自动化测试**：`pip install -r server/requirements-dev.txt` 后运行 `python -m pytest -q`（见仓库根目录 `tests/`：越权拦截单测 + `/api/command` 契约测试 + 关键词兜底测试；不依赖 ASR 模型、网络与真实桌面）。改到文件安全/接口相关代码后跑一遍保持全绿。
 - **固件**：烧录后串口观察 `ESP32 IP`、录音、上传、播放日志；检查 WS2812 状态灯与 GPIO 是否符合预期。
 - **端到端**：建议跑 30 次完整流程，记录失败原因与耗时。
 - **接口联调**：必须按 [软件接口协议](docs/软件接口协议.md) 的顺序，从固定 PCM、固定 JSON、固定 WAV 逐步联调，再接入真实 ASR 和 DeepSeek。

@@ -1,0 +1,10 @@
+# 开发/测试专用依赖（轻量版：不含 faster-whisper / pyttsx3 等重型库）
+# server.py 已对 ASR、TTS 做懒加载，测试导入模块时不需要这些重型依赖。
+#
+# 安装：python -m venv .venv && .venv\Scripts\pip install -r server/requirements-dev.txt
+# 运行：.venv\Scripts\python -m pytest -q
+fastapi
+openai
+httpx
+pytest
+uvicorn
