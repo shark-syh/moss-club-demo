@@ -81,7 +81,9 @@ def bump(part):
         print("写入版本失败", new)
         sys.exit(1)
     git("add", "VERSION")
-    git("commit", "-m", f"chore(version): v{new}", "--", "VERSION")
+    # bump 时跳过 pre-commit 钩子：钩子会用「当前标签」重写 VERSION，而此刻新标签尚未创建，
+    # 会把 VERSION 覆盖回旧版本导致提交空转。VERSION 已由上方 write(new) 显式写好，跳过即可。
+    git("commit", "--no-verify", "-m", f"chore(version): v{new}", "--", "VERSION")
     if git("status", "--porcelain", "--", "VERSION"):
         print("警告：VERSION 未成功提交，已中止打标签 v" + new)
         sys.exit(1)
