@@ -50,8 +50,9 @@ def full_version():
     return git("describe", "--tags", "--always", "--dirty") or current_version()
 
 
-def write():
-    ver = current_version()
+def write(ver=None):
+    if ver is None:
+        ver = current_version()
     VERSION_FILE.write_text(ver + "\n", encoding="utf-8")
     return ver
 
@@ -76,9 +77,14 @@ def bump(part):
         sys.exit(1)
 
     new = f"{major}.{minor}.{patch}"
-    write()
+    if write(new) != new:
+        print("写入版本失败", new)
+        sys.exit(1)
     git("add", "VERSION")
     git("commit", "-m", f"chore(version): v{new}", "--", "VERSION")
+    if git("status", "--porcelain", "--", "VERSION"):
+        print("警告：VERSION 未成功提交，已中止打标签 v" + new)
+        sys.exit(1)
     git("tag", "-a", f"v{new}", "-m", f"v{new}")
     print(f"已写入并提交 v{new}，并打标签 v{new}")
     print("下一步：git push origin master --tags")
