@@ -36,3 +36,8 @@ Thumbs.db
 *.ino.eeprom
 *.ino.hex
 build/
+
+# 3D 打印资产 / 本地临时截图（不入库）
+stl文件.zip
+stl文件/
+v2_*_img_*.png
